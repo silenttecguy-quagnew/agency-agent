@@ -1,0 +1,2 @@
+# Replit configuration for Streamlit
+run = "streamlit run app.py"
