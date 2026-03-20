@@ -1,31 +1,253 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agency Agent Dashboard</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MiniCoder</title>
+  <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #121212; font-family: Arial, sans-serif; min-height: 100vh; padding: 24px 16px; }
+    h1 { color: #eee; font-size: 20px; margin-bottom: 20px; letter-spacing: 0.5px; }
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1e1e1e; }
+    ::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+  </style>
 </head>
 <body>
-    <header>
-        <h1>Agency Agent Dashboard</h1>
-    </header>
-    <main>
-        <section id="overview">
-            <h2>Overview</h2>
-            <p>Welcome to the Agency Agent Dashboard. Here you can manage your agency operations with ease.</p>
-        </section>
-        <section id="tasks">
-            <h2>Tasks</h2>
-            <ul>
-                <li>Review Applications</li>
-                <li>Update Listings</li>
-                <li>Communicate with Clients</li>
-            </ul>
-        </section>
-    </main>
-    <footer>
-        <p>&copy; 2026 Agency. All rights reserved.</p>
-    </footer>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const LANGUAGES = ['javascript', 'python', 'html', 'css', 'json'];
+    const STORAGE_KEY = 'minicoder_saved_files';
+    const EXT = { javascript:'js', python:'py', html:'html', css:'css', json:'json' };
+
+    const SNIPPETS = {
+      javascript: `// JavaScript\nconsole.log("Hello from MiniCoder!");\n\nfunction greet(name) {\n  return \`Hello, \${name}!\`;\n}\nconsole.log(greet("World"));`,
+      python: `# Python\nprint("Hello from MiniCoder!")\n\ndef greet(name):\n    return f"Hello, {name}!"\n\nprint(greet("World"))`,
+      html: `<!-- HTML -->\n<!DOCTYPE html>\n<html>\n  <head><title>Mini Page</title></head>\n  <body>\n    <h1>Hello!</h1>\n  </body>\n</html>`,
+      css: `/* CSS */\nbody {\n  font-family: Arial, sans-serif;\n  background: #f0f0f0;\n}\nh1 { color: #007acc; }`,
+      json: `{\n  "name": "MiniCoder",\n  "version": "1.0",\n  "features": ["save","download","run"]\n}`,
+    };
+
+    function loadFiles() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+      catch { return []; }
+    }
+    function saveFiles(files) { localStorage.setItem(STORAGE_KEY, JSON.stringify(files)); }
+
+    /* ── styles ── */
+    const S = {
+      wrap: { maxWidth:900, margin:'0 auto', border:'1px solid #444', borderRadius:8, overflow:'hidden', boxShadow:'0 4px 16px rgba(0,0,0,.4)' },
+      bar: { display:'flex', alignItems:'center', gap:8, background:'#2d2d2d', padding:'8px 12px', borderBottom:'1px solid #444', flexWrap:'wrap' },
+      title: { color:'#ccc', fontSize:13, fontWeight:'bold', marginRight:'auto' },
+      sel: { background:'#3a3a3a', color:'#eee', border:'1px solid #555', borderRadius:4, padding:'4px 8px', fontSize:12, cursor:'pointer' },
+      btn: (bg) => ({ background:bg, color:'#fff', border:'none', borderRadius:4, padding:'5px 12px', fontSize:12, cursor:'pointer', fontWeight:'bold' }),
+      warn: { background:'#2a2000', color:'#ffcc44', fontSize:11, padding:'4px 12px', borderBottom:'1px solid #444' },
+      toast: { background:'#1a3a1a', color:'#2ecc71', fontSize:11, padding:'4px 12px', borderBottom:'1px solid #444' },
+      edArea: { display:'flex', background:'#1e1e1e' },
+      nums: { background:'#252526', color:'#858585', fontFamily:"'Courier New',monospace", fontSize:14, lineHeight:'1.6', padding:'12px 8px', textAlign:'right', userSelect:'none', minWidth:40, borderRight:'1px solid #333' },
+      ta: { flex:1, background:'transparent', color:'#d4d4d4', fontFamily:"'Courier New',monospace", fontSize:14, lineHeight:'1.6', padding:12, border:'none', outline:'none', resize:'none', minHeight:220, whiteSpace:'pre', overflowWrap:'normal', overflowX:'auto' },
+      out: { background:'#0d0d0d', color:'#00ff88', fontFamily:"'Courier New',monospace", fontSize:13, padding:'10px 12px', borderTop:'1px solid #333', whiteSpace:'pre-wrap', wordBreak:'break-all' },
+      outLabel: { color:'#888', fontSize:11, marginBottom:4 },
+      status: { display:'flex', justifyContent:'space-between', background:'#007acc', color:'#fff', fontSize:11, padding:'2px 10px' },
+      panel: { background:'#1a1a2e', borderTop:'2px solid #444', padding:12 },
+      panelHead: { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 },
+      panelTitle: { color:'#e67e22', fontSize:13, fontWeight:'bold' },
+      empty: { color:'#666', fontSize:12, fontStyle:'italic', padding:'6px 0' },
+      item: { display:'flex', alignItems:'center', gap:8, background:'#252540', border:'1px solid #333', borderRadius:5, padding:'8px 10px', marginBottom:6 },
+      itemInfo: { flex:1, minWidth:0 },
+      itemName: { color:'#eee', fontSize:13, fontWeight:'bold', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
+      itemMeta: { color:'#888', fontSize:11, marginTop:2 },
+      itemActs: { display:'flex', gap:5, flexShrink:0 },
+      ab: (bg) => ({ background:bg, color:'#fff', border:'none', borderRadius:3, padding:'3px 8px', fontSize:11, cursor:'pointer', fontWeight:'bold' }),
+    };
+
+    function MiniCoder() {
+      const [lang, setLang] = useState('javascript');
+      const [code, setCode] = useState(SNIPPETS.javascript);
+      const [output, setOutput] = useState('');
+      const [copyLbl, setCopyLbl] = useState('Copy');
+      const [files, setFiles] = useState(loadFiles);
+      const [showFiles, setShowFiles] = useState(false);
+      const [toast, setToast] = useState('');
+      const taRef = useRef(null);
+
+      useEffect(() => { setCode(SNIPPETS[lang]); setOutput(''); }, [lang]);
+
+      const lines = code.split('\n').length;
+
+      function showToast(msg) { setToast(msg); setTimeout(() => setToast(''), 2500); }
+
+      function handleKey(e) {
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          const el = e.target, s = el.selectionStart, end = el.selectionEnd;
+          const next = code.slice(0, s) + '  ' + code.slice(end);
+          setCode(next);
+          requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = s + 2; });
+        }
+      }
+
+      function copy() {
+        navigator.clipboard.writeText(code)
+          .then(() => { setCopyLbl('Copied!'); setTimeout(() => setCopyLbl('Copy'), 1800); })
+          .catch(() => { setCopyLbl('Failed'); setTimeout(() => setCopyLbl('Copy'), 2000); });
+      }
+
+      function save() {
+        const name = window.prompt('Name this file:', `untitled.${EXT[lang]||'txt'}`);
+        if (!name || !name.trim()) return;
+        const entry = { id: Date.now().toString(), name: name.trim(), lang, code, savedAt: new Date().toLocaleString() };
+        const updated = [entry, ...files];
+        setFiles(updated); saveFiles(updated);
+        setShowFiles(true);
+        showToast(`✅ Saved "${entry.name}"`);
+      }
+
+      function download(filename, content) {
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename; a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function downloadCurrent() {
+        const name = window.prompt('Download as:', `code.${EXT[lang]||'txt'}`);
+        if (!name || !name.trim()) return;
+        download(name.trim(), code);
+      }
+
+      function loadFile(f) {
+        if (window.confirm(`Load "${f.name}"? Current code will be replaced.`)) {
+          setLang(f.lang); setCode(f.code); setOutput('');
+        }
+      }
+
+      function deleteFile(id) {
+        const f = files.find(x => x.id === id);
+        if (!f) return;
+        if (window.confirm(`Delete "${f.name}"?`)) {
+          const updated = files.filter(x => x.id !== id);
+          setFiles(updated); saveFiles(updated);
+        }
+      }
+
+      function run() {
+        if (lang !== 'javascript') {
+          setOutput(`ℹ️  Run only works for JavaScript.\nFor ${lang}, copy and run in your own environment.`);
+          return;
+        }
+        const logs = [];
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        try {
+          const w = iframe.contentWindow;
+          w.console = {
+            log: (...a) => logs.push(a.map(x => typeof x === 'object' ? JSON.stringify(x,null,2) : String(x)).join(' ')),
+            error: (...a) => logs.push('ERROR: ' + a.join(' ')),
+            warn: (...a) => logs.push('WARN: ' + a.join(' ')),
+          };
+          w.eval(code);
+          setOutput(logs.join('\n') || '(no output)');
+        } catch (err) {
+          setOutput('❌ ' + err.message);
+        } finally {
+          document.body.removeChild(iframe);
+        }
+      }
+
+      return (
+        <div style={S.wrap}>
+          {/* toolbar */}
+          <div style={S.bar}>
+            <span style={S.title}>⌨️ MiniCoder</span>
+            <select style={S.sel} value={lang} onChange={e => setLang(e.target.value)} aria-label="Language">
+              {LANGUAGES.map(l => <option key={l} value={l}>{l.charAt(0).toUpperCase()+l.slice(1)}</option>)}
+            </select>
+            <button style={S.btn('#555')} onClick={copy}>{copyLbl}</button>
+            <button style={S.btn('#2ecc71')} onClick={save}>💾 Save</button>
+            <button style={S.btn('#9b59b6')} onClick={downloadCurrent}>⬇ Download</button>
+            <button style={S.btn('#e67e22')} onClick={() => setShowFiles(v => !v)}>
+              📁 My Files{files.length > 0 ? ` (${files.length})` : ''}
+            </button>
+            {lang === 'javascript' && <button style={S.btn('#4a9eff')} onClick={run}>▶ Run</button>}
+          </div>
+
+          {toast && <div style={S.toast}>{toast}</div>}
+          {lang === 'javascript' && <div style={S.warn}>⚠️ Only run code you trust — execution happens in your browser.</div>}
+
+          {/* editor */}
+          <div style={S.edArea}>
+            <div style={S.nums}>{Array.from({length:lines},(_,i)=><div key={i}>{i+1}</div>)}</div>
+            <textarea
+              ref={taRef}
+              style={S.ta}
+              value={code}
+              onChange={e => setCode(e.target.value)}
+              onKeyDown={handleKey}
+              spellCheck={false}
+              autoCapitalize="off"
+              autoCorrect="off"
+              autoComplete="off"
+              rows={Math.max(lines, 10)}
+              aria-label="Code editor"
+            />
+          </div>
+
+          {output && <div style={S.out}><div style={S.outLabel}>Output:</div>{output}</div>}
+
+          <div style={S.status}>
+            <span>{lang.toUpperCase()}</span>
+            <span>Lines: {lines} | Chars: {code.length}</span>
+          </div>
+
+          {/* saved files panel */}
+          {showFiles && (
+            <div style={S.panel}>
+              <div style={S.panelHead}>
+                <span style={S.panelTitle}>📁 My Saved Files</span>
+                <button style={S.ab('#555')} onClick={() => setShowFiles(false)}>✕ Close</button>
+              </div>
+              {files.length === 0
+                ? <div style={S.empty}>No saved files yet. Click 💾 Save to add one.</div>
+                : files.map(f => (
+                  <div key={f.id} style={S.item}>
+                    <div style={S.itemInfo}>
+                      <div style={S.itemName}>{f.name}</div>
+                      <div style={S.itemMeta}>{f.lang.toUpperCase()} · {f.savedAt}</div>
+                    </div>
+                    <div style={S.itemActs}>
+                      <button style={S.ab('#4a9eff')} onClick={() => loadFile(f)}>Load</button>
+                      <button style={S.ab('#9b59b6')} onClick={() => download(f.name, f.code)}>⬇</button>
+                      <button style={S.ab('#e74c3c')} onClick={() => deleteFile(f.id)}>Delete</button>
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function App() {
+      return (
+        <div>
+          <h1>⌨️ MiniCoder</h1>
+          <MiniCoder />
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
 </body>
 </html>
