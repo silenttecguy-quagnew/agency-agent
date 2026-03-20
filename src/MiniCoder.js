@@ -1,6 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 const LANGUAGES = ['javascript', 'python', 'html', 'css', 'json'];
+const STORAGE_KEY = 'minicoder_saved_files';
+
+const FILE_EXTENSIONS = {
+  javascript: 'js',
+  python: 'py',
+  html: 'html',
+  css: 'css',
+  json: 'json',
+};
+
+function loadSavedFiles() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function persistSavedFiles(files) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(files));
+}
 
 const styles = {
   wrapper: {
@@ -19,6 +40,7 @@ const styles = {
     background: '#2d2d2d',
     padding: '8px 12px',
     borderBottom: '1px solid #444',
+    flexWrap: 'wrap',
   },
   title: {
     color: '#ccc',
@@ -38,6 +60,36 @@ const styles = {
   },
   button: {
     background: '#4a9eff',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '4px',
+    padding: '5px 12px',
+    fontSize: '12px',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+  },
+  saveButton: {
+    background: '#2ecc71',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '4px',
+    padding: '5px 12px',
+    fontSize: '12px',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+  },
+  downloadButton: {
+    background: '#9b59b6',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '4px',
+    padding: '5px 12px',
+    fontSize: '12px',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+  },
+  folderButton: {
+    background: '#e67e22',
     color: '#fff',
     border: 'none',
     borderRadius: '4px',
@@ -118,6 +170,70 @@ const styles = {
     fontSize: '11px',
     padding: '2px 10px',
   },
+  savedPanel: {
+    background: '#1a1a2e',
+    borderTop: '2px solid #444',
+    padding: '12px',
+  },
+  savedPanelHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '10px',
+  },
+  savedPanelTitle: {
+    color: '#e67e22',
+    fontSize: '13px',
+    fontWeight: 'bold',
+  },
+  savedEmpty: {
+    color: '#666',
+    fontSize: '12px',
+    fontStyle: 'italic',
+    padding: '6px 0',
+  },
+  savedItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: '#252540',
+    border: '1px solid #333',
+    borderRadius: '5px',
+    padding: '8px 10px',
+    marginBottom: '6px',
+  },
+  savedItemInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  savedItemName: {
+    color: '#eee',
+    fontSize: '13px',
+    fontWeight: 'bold',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  savedItemMeta: {
+    color: '#888',
+    fontSize: '11px',
+    marginTop: '2px',
+  },
+  savedItemActions: {
+    display: 'flex',
+    gap: '5px',
+    flexShrink: 0,
+  },
+  actionBtn: (color) => ({
+    background: color,
+    color: '#fff',
+    border: 'none',
+    borderRadius: '3px',
+    padding: '3px 8px',
+    fontSize: '11px',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+  }),
 };
 
 const DEFAULT_SNIPPETS = {
@@ -135,6 +251,9 @@ function MiniCoder({ initialCode, language: initialLanguage = 'javascript', onCh
   );
   const [output, setOutput] = useState('');
   const [copyLabel, setCopyLabel] = useState('Copy');
+  const [savedFiles, setSavedFiles] = useState(loadSavedFiles);
+  const [showSaved, setShowSaved] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
   const textareaRef = useRef(null);
 
   useEffect(() => {
@@ -164,6 +283,66 @@ function MiniCoder({ initialCode, language: initialLanguage = 'javascript', onCh
       setCopyLabel('Copy failed');
       setTimeout(() => setCopyLabel('Copy'), 2000);
     });
+  }
+
+  function handleSave() {
+    const name = window.prompt('Enter a name for this file:', `untitled.${FILE_EXTENSIONS[language] || 'txt'}`);
+    if (!name || !name.trim()) return;
+    const entry = {
+      id: Date.now().toString(),
+      name: name.trim(),
+      language,
+      code,
+      savedAt: new Date().toLocaleString(),
+    };
+    const updated = [entry, ...savedFiles];
+    setSavedFiles(updated);
+    persistSavedFiles(updated);
+    setShowSaved(true);
+    setSaveMsg(`✅ Saved "${entry.name}"`);
+    setTimeout(() => setSaveMsg(''), 2500);
+  }
+
+  function handleDownload() {
+    const ext = FILE_EXTENSIONS[language] || 'txt';
+    const defaultName = `code.${ext}`;
+    const name = window.prompt('Download as:', defaultName);
+    if (!name || !name.trim()) return;
+    const blob = new Blob([code], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name.trim();
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleLoadFile(file) {
+    if (window.confirm(`Load "${file.name}"? Your current unsaved code will be replaced.`)) {
+      setLanguage(file.language);
+      setCode(file.code);
+      setOutput('');
+    }
+  }
+
+  function handleDeleteFile(id) {
+    const file = savedFiles.find(f => f.id === id);
+    if (!file) return;
+    if (window.confirm(`Delete "${file.name}"?`)) {
+      const updated = savedFiles.filter(f => f.id !== id);
+      setSavedFiles(updated);
+      persistSavedFiles(updated);
+    }
+  }
+
+  function handleDownloadFile(file) {
+    const blob = new Blob([file.code], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function handleRun() {
@@ -222,10 +401,21 @@ function MiniCoder({ initialCode, language: initialLanguage = 'javascript', onCh
           ))}
         </select>
         <button style={styles.copyButton} onClick={handleCopy}>{copyLabel}</button>
+        <button style={styles.saveButton} onClick={handleSave}>💾 Save</button>
+        <button style={styles.downloadButton} onClick={handleDownload}>⬇ Download</button>
+        <button style={styles.folderButton} onClick={() => setShowSaved(s => !s)}>
+          📁 My Files {savedFiles.length > 0 && `(${savedFiles.length})`}
+        </button>
         {language === 'javascript' && (
           <button style={styles.button} onClick={handleRun}>▶ Run</button>
         )}
       </div>
+
+      {saveMsg && (
+        <div style={{ background: '#1a3a1a', color: '#2ecc71', fontSize: '11px', padding: '4px 12px', borderBottom: '1px solid #444' }}>
+          {saveMsg}
+        </div>
+      )}
 
       {language === 'javascript' && (
         <div style={styles.runWarning}>
@@ -265,6 +455,32 @@ function MiniCoder({ initialCode, language: initialLanguage = 'javascript', onCh
         <span>{language.toUpperCase()}</span>
         <span>Lines: {lineCount} | Chars: {code.length}</span>
       </div>
+
+      {showSaved && (
+        <div style={styles.savedPanel}>
+          <div style={styles.savedPanelHeader}>
+            <span style={styles.savedPanelTitle}>📁 My Saved Files</span>
+            <button style={styles.actionBtn('#555')} onClick={() => setShowSaved(false)}>✕ Close</button>
+          </div>
+          {savedFiles.length === 0 ? (
+            <div style={styles.savedEmpty}>No saved files yet. Click 💾 Save to add one.</div>
+          ) : (
+            savedFiles.map(file => (
+              <div key={file.id} style={styles.savedItem}>
+                <div style={styles.savedItemInfo}>
+                  <div style={styles.savedItemName}>{file.name}</div>
+                  <div style={styles.savedItemMeta}>{file.language.toUpperCase()} · {file.savedAt}</div>
+                </div>
+                <div style={styles.savedItemActions}>
+                  <button style={styles.actionBtn('#4a9eff')} onClick={() => handleLoadFile(file)}>Load</button>
+                  <button style={styles.actionBtn('#9b59b6')} onClick={() => handleDownloadFile(file)}>⬇</button>
+                  <button style={styles.actionBtn('#e74c3c')} onClick={() => handleDeleteFile(file.id)}>Delete</button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
