@@ -1,114 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MiniCoder from './MiniCoder';
+import SkillPanel from './SkillPanel';
 
-const AGENTS = [
-  {
-    id: 'researcher',
-    icon: '🔍',
-    name: 'researcher',
-    tagline: 'Multi-source research with citations. Always verify before you claim.',
-    snippet: `# researcher — deep web research with source citations
+const BASE = process.env.PUBLIC_URL || '';
 
-# Single-message invocation (CLI)
-zeroclaw agent --agent researcher \\
-  -m "summarise the latest AI agent frameworks released in 2026"
+const ICONS = {
+  researcher:       '🔍',
+  coder:            '💻',
+  'code-reviewer':  '👁️',
+  'security-scanner': '🔒',
+  devops:           '⚙️',
+  'data-analyst':   '📊',
+  'content-writer': '✍️',
+};
 
-# Skill invocations
-@ZeroClaw researcher --query "compare Cloudflare Workers vs AWS Lambda cold-start latency" --depth 3
-@ZeroClaw researcher --topic "Rust async runtimes" --format brief
-@ZeroClaw researcher --query "SEC filings for OpenAI 2025" --sources sec.gov,reuters.com`,
-  },
-  {
-    id: 'coder',
-    icon: '💻',
-    name: 'coder',
-    tagline: 'Production-quality code. Reads before it writes. Tests before it ships.',
-    snippet: `# coder — full-stack code generation, debugging, refactoring
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
-zeroclaw agent --agent coder \\
-  -m "add rate limiting middleware to my Express API"
+function parseFrontmatter(text) {
+  const m = text.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if (!m) return { name: '', description: '', body: text.trim() };
+  const fm = m[1];
+  const nameM  = fm.match(/^name:\s*(.+)$/m);
+  const descM  = fm.match(/^description:\s*"([^"]+)"/m);
+  return {
+    name:        nameM ? nameM[1].trim() : '',
+    description: descM ? descM[1].trim() : '',
+    body:        m[2].trim(),
+  };
+}
 
-@ZeroClaw coder --task "add rate limiting middleware to the Express API"
-@ZeroClaw coder --file src/auth/login.rs --task "fix the session expiry bug"
-@ZeroClaw coder --task "write a Python script to parse and deduplicate a CSV" --lang python
-@ZeroClaw coder --test src/billing/ --framework jest
-@ZeroClaw coder --explain src/scheduler.ts`,
-  },
-  {
-    id: 'code-reviewer',
-    icon: '👁️',
-    name: 'code-reviewer',
-    tagline: 'Static analysis + AI review. Severity-rated findings in CODE_REVIEW.md.',
-    snippet: `# code-reviewer — AI-powered code review with severity ratings
+/** Pull the first fenced code block from the ## Usage section. */
+function extractUsageSnippet(body) {
+  const usageSection = body.match(/## Usage[\s\S]*?(?=\n##|$)/);
+  if (!usageSection) return '';
+  const cb = usageSection[0].match(/```(?:\w*)\n([\s\S]*?)```/);
+  return cb ? cb[1].trim() : '';
+}
 
-zeroclaw agent --agent code-reviewer \\
-  -m "review the changes in my last commit"
+/** First sentence only, for the card tagline. */
+function firstSentence(text) {
+  return text.split(/[.!?]\s+/)[0].replace(/[.!?]$/, '');
+}
 
-@ZeroClaw code-reviewer --path src/
-@ZeroClaw code-reviewer --diff HEAD~1..HEAD
-@ZeroClaw code-reviewer --pr 142
-@ZeroClaw code-reviewer --path src/ --strict   # exit 1 on MEDIUM+ issues (CI mode)`,
-  },
-  {
-    id: 'security-scanner',
-    icon: '🔒',
-    name: 'security-scanner',
-    tagline: 'CVE audit, secrets detection, injection patterns. Generates SECURITY_REPORT.md.',
-    snippet: `# security-scanner — comprehensive security audit
-
-zeroclaw agent --agent security-scanner \\
-  -m "scan this project for security issues"
-
-@ZeroClaw security-scanner --full
-@ZeroClaw security-scanner --deps-only          # CVEs + supply chain only
-@ZeroClaw security-scanner --secrets-only       # hardcoded credential scan
-@ZeroClaw security-scanner --fail-on high       # CI gate: exit 1 on HIGH+`,
-  },
-  {
-    id: 'devops',
-    icon: '⚙️',
-    name: 'devops',
-    tagline: 'CI/CD pipelines, Dockerfiles, Kubernetes manifests, Terraform configs.',
-    snippet: `# devops — automation-first infrastructure
-
-zeroclaw agent --agent devops \\
-  -m "generate a GitHub Actions CI pipeline for a Python project"
-
-@ZeroClaw devops --pipeline github-actions --lang python
-@ZeroClaw devops --dockerfile --app node --port 3000 --multi-stage
-@ZeroClaw devops --k8s deployment --app my-api --replicas 3 --autoscale
-@ZeroClaw devops --terraform aws --resources "vpc,eks,rds"`,
-  },
-  {
-    id: 'data-analyst',
-    icon: '📊',
-    name: 'data-analyst',
-    tagline: 'EDA, trend detection, and actionable recommendations. Generates ANALYSIS_REPORT.md.',
-    snippet: `# data-analyst — exploratory data analysis and business insights
-
-zeroclaw agent --agent data-analyst \\
-  -m "analyse metrics.csv and show me weekly active users and revenue trends"
-
-@ZeroClaw data-analyst --input metrics.csv --describe "show weekly active users and revenue trends"
-@ZeroClaw data-analyst --input orders.parquet --question "which product categories are declining?"
-@ZeroClaw data-analyst --input users.csv --question "what drives churn?" --method regression`,
-  },
-  {
-    id: 'content-writer',
-    icon: '✍️',
-    name: 'content-writer',
-    tagline: 'Blog posts, docs, changelogs, READMEs. Clear, scannable, reader-first.',
-    snippet: `# content-writer — polished written content, ready to publish
-
-zeroclaw agent --agent content-writer \\
-  -m "write a 900-word blog post: Why Rust is the future of AI infrastructure"
-
-@ZeroClaw content-writer --type blog --topic "Why Rust is the future of AI infrastructure" --length 900
-@ZeroClaw content-writer --type changelog --from v1.3.0 --to HEAD
-@ZeroClaw content-writer --type readme --repo . --audience "developers, self-hosters"
-@ZeroClaw content-writer --rewrite docs/setup.md --goal "make it clearer and shorter"`,
-  },
-];
+// ── Styles ─────────────────────────────────────────────────────────────────────
 
 const styles = {
   page: {
@@ -142,15 +76,15 @@ const styles = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-    gap: '12px',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+    gap: '10px',
     marginBottom: '24px',
   },
   card: {
     background: '#1e1e1e',
     border: '1px solid #333',
     borderRadius: '8px',
-    padding: '14px 16px',
+    padding: '12px 14px',
     cursor: 'pointer',
     transition: 'border-color 0.15s, background 0.15s',
   },
@@ -162,21 +96,18 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    marginBottom: '6px',
+    marginBottom: '5px',
   },
-  cardIcon: {
-    fontSize: '20px',
-    lineHeight: 1,
-  },
+  cardIcon: { fontSize: '18px', lineHeight: 1 },
   cardName: {
     color: '#eee',
-    fontSize: '14px',
+    fontSize: '13px',
     fontWeight: 'bold',
     fontFamily: "'Courier New', Courier, monospace",
     margin: 0,
   },
   cardTagline: {
-    color: '#999',
+    color: '#888',
     fontSize: '12px',
     lineHeight: '1.4',
     margin: 0,
@@ -184,102 +115,191 @@ const styles = {
   activeHint: {
     color: '#4a9eff',
     fontSize: '11px',
-    marginTop: '8px',
+    marginTop: '6px',
   },
   sectionLabel: {
-    color: '#888',
-    fontSize: '12px',
+    color: '#666',
+    fontSize: '11px',
     fontWeight: 'bold',
-    letterSpacing: '0.5px',
+    letterSpacing: '0.6px',
     textTransform: 'uppercase',
-    marginBottom: '12px',
+    marginBottom: '10px',
+  },
+  loading: {
+    color: '#666',
+    fontSize: '13px',
+    padding: '40px 0',
+    textAlign: 'center',
+  },
+  error: {
+    color: '#ff5555',
+    fontSize: '13px',
+    padding: '20px 0',
+  },
+  editorLabel: {
+    color: '#666',
+    fontSize: '11px',
+    fontWeight: 'bold',
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
+    marginBottom: '10px',
+    marginTop: '20px',
   },
   quickStart: {
     background: '#1e1e1e',
-    border: '1px solid #333',
+    border: '1px solid #2e2e2e',
     borderRadius: '8px',
-    padding: '14px 16px',
-    marginBottom: '24px',
+    padding: '12px 16px',
     fontSize: '12px',
-    color: '#aaa',
-    lineHeight: '1.7',
+    color: '#888',
+    lineHeight: '1.8',
   },
-  quickStartCode: {
+  mono: {
     fontFamily: "'Courier New', Courier, monospace",
     color: '#d4d4d4',
   },
 };
 
-const Dashboard = () => {
-  const [selectedId, setSelectedId] = useState('researcher');
+// ── Component ──────────────────────────────────────────────────────────────────
 
-  const selected = AGENTS.find(a => a.id === selectedId);
+const Dashboard = () => {
+  const [agents,     setAgents]     = useState(null);   // null = loading
+  const [error,      setError]      = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSkills() {
+      try {
+        // 1. Fetch the ordered list of agent names
+        const indexRes = await fetch(`${BASE}/skills/index.json`);
+        if (!indexRes.ok) throw new Error(`index.json: ${indexRes.status}`);
+        const names = await indexRes.json();
+
+        // 2. Fetch all skill files in parallel
+        const markdowns = await Promise.all(
+          names.map(name =>
+            fetch(`${BASE}/skills/${name}.md`)
+              .then(r => { if (!r.ok) throw new Error(`${name}.md: ${r.status}`); return r.text(); })
+          )
+        );
+
+        if (cancelled) return;
+
+        // 3. Parse frontmatter + body for each skill
+        const loaded = names.map((name, i) => {
+          const { description, body } = parseFrontmatter(markdowns[i]);
+          return {
+            id:          name,
+            name,
+            icon:        ICONS[name] || '🤖',
+            tagline:     firstSentence(description),
+            description,
+            body,
+            snippet:     extractUsageSnippet(body),
+          };
+        });
+
+        setAgents(loaded);
+        setSelectedId(loaded[0]?.id ?? null);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      }
+    }
+
+    loadSkills();
+    return () => { cancelled = true; };
+  }, []);
+
+  const selected = agents?.find(a => a.id === selectedId) ?? null;
 
   return (
     <div style={styles.page}>
+      {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.h1}>🦀 ZeroClaw Agent Dashboard</h1>
-        <p style={styles.subtitle}>7 agents · click one to load its usage into the editor</p>
+        {agents && (
+          <p style={styles.subtitle}>{agents.length} agents loaded · click one to explore</p>
+        )}
       </div>
 
       <hr style={styles.divider} />
 
-      <div style={styles.sectionLabel}>Agents</div>
-      <div style={styles.grid}>
-        {AGENTS.map(agent => {
-          const isActive = agent.id === selectedId;
-          return (
-            <div
-              key={agent.id}
-              style={{ ...styles.card, ...(isActive ? styles.cardActive : {}) }}
-              onClick={() => setSelectedId(agent.id)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={e => e.key === 'Enter' && setSelectedId(agent.id)}
-              aria-pressed={isActive}
-              aria-label={`Select ${agent.name} agent`}
-            >
-              <div style={styles.cardHeader}>
-                <span style={styles.cardIcon}>{agent.icon}</span>
-                <span style={styles.cardName}>{agent.name}</span>
+      {/* Loading / error */}
+      {!agents && !error && (
+        <div style={styles.loading}>Loading skills…</div>
+      )}
+      {error && (
+        <div style={styles.error}>⚠ Failed to load skills: {error}</div>
+      )}
+
+      {/* Agent cards */}
+      {agents && (
+        <>
+          <div style={styles.sectionLabel}>Agents</div>
+          <div style={styles.grid}>
+            {agents.map(agent => {
+              const isActive = agent.id === selectedId;
+              return (
+                <div
+                  key={agent.id}
+                  style={{ ...styles.card, ...(isActive ? styles.cardActive : {}) }}
+                  onClick={() => setSelectedId(agent.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={e => e.key === 'Enter' && setSelectedId(agent.id)}
+                  aria-pressed={isActive}
+                  aria-label={`Select ${agent.name} agent`}
+                >
+                  <div style={styles.cardHeader}>
+                    <span style={styles.cardIcon}>{agent.icon}</span>
+                    <span style={styles.cardName}>{agent.name}</span>
+                  </div>
+                  <p style={styles.cardTagline}>{agent.tagline}</p>
+                  {isActive && <div style={styles.activeHint}>▼ details below</div>}
+                </div>
+              );
+            })}
+          </div>
+
+          <hr style={styles.divider} />
+
+          {/* Full skill content */}
+          {selected && (
+            <>
+              <div style={styles.sectionLabel}>
+                {selected.icon} {selected.name}
               </div>
-              <p style={styles.cardTagline}>{agent.tagline}</p>
-              {isActive && (
-                <div style={styles.activeHint}>▼ usage loaded below</div>
+              <SkillPanel body={selected.body} />
+
+              {/* Usage in MiniCoder */}
+              {selected.snippet && (
+                <>
+                  <div style={styles.editorLabel}>Try it — edit &amp; copy</div>
+                  <MiniCoder
+                    key={selected.id}
+                    language="bash"
+                    initialCode={selected.snippet}
+                  />
+                </>
               )}
-            </div>
-          );
-        })}
-      </div>
+            </>
+          )}
 
-      <hr style={styles.divider} />
+          <hr style={styles.divider} />
 
-      <div style={styles.sectionLabel}>
-        {selected ? `${selected.icon} ${selected.name} — usage` : 'Usage'}
-      </div>
-      <MiniCoder
-        key={selectedId}
-        language="bash"
-        initialCode={selected ? selected.snippet : ''}
-      />
-
-      <hr style={styles.divider} />
-
-      <div style={styles.quickStart}>
-        <strong style={styles.quickStartCode}>Quick install:</strong>
-        <br />
-        <code style={styles.quickStartCode}>
-          cp zeroclaw/config.toml ~/.zeroclaw/config.toml
-        </code>
-        {'  ·  '}
-        <code style={styles.quickStartCode}>
-          export ZEROCLAW_API_KEY="sk-or-..."
-        </code>
-        {'  ·  '}
-        <code style={styles.quickStartCode}>
-          zeroclaw daemon
-        </code>
-      </div>
+          {/* Quick-start footer */}
+          <div style={styles.quickStart}>
+            <strong style={styles.mono}>Quick install: </strong>
+            <code style={styles.mono}>cp zeroclaw/config.toml ~/.zeroclaw/config.toml</code>
+            {'  ·  '}
+            <code style={styles.mono}>export ZEROCLAW_API_KEY="sk-or-..."</code>
+            {'  ·  '}
+            <code style={styles.mono}>zeroclaw daemon</code>
+          </div>
+        </>
+      )}
     </div>
   );
 };
