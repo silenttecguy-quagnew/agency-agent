@@ -25,4 +25,4 @@ yarn.lock
 
 # IDEs
 .idea/
-.vscode/
+.vscode/__pycache__/
