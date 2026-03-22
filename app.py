@@ -27,7 +27,7 @@ for category, agents in categories.items():
     for agent in agents:
         st.write(f"**Name:** {agent['name']}")  # Adjust based on actual agent structure
         st.write(f"**Description:** {agent['description']}")  # Adjust based on actual agent structure
-        st.write(f"**Execution Capabilities:** {agent['capabilities']}  # Adjust based on actual agent structure
+        st.write(f"**Execution Capabilities:** {agent['capabilities']}")  # Adjust based on actual agent structure
         st.write("---")
 
 # Optimize for mobile/tablet
