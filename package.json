@@ -4,6 +4,7 @@
   "private": true,
   "homepage": "https://silenttecguy-quagnew.github.io/agency-agent/",
   "scripts": {
+    "start": "react-scripts start",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
     "build": "react-scripts build"
