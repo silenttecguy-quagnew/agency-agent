@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-const LANGUAGES = ['javascript', 'python', 'html', 'css', 'json'];
+const LANGUAGES = ['javascript', 'python', 'bash', 'html', 'css', 'json'];
 
 const styles = {
   wrapper: {
@@ -123,6 +123,7 @@ const styles = {
 const DEFAULT_SNIPPETS = {
   javascript: `// JavaScript\nconsole.log("Hello from MiniCoder!");\n\nfunction greet(name) {\n  return \`Hello, \${name}!\`;\n}\n\nconsole.log(greet("World"));`,
   python: `# Python\nprint("Hello from MiniCoder!")\n\ndef greet(name):\n    return f"Hello, {name}!"\n\nprint(greet("World"))`,
+  bash: `#!/usr/bin/env bash\n# ZeroClaw — quick reference\nzeroclaw status\nzeroclaw agent -m "hello"\nzeroclaw doctor`,
   html: `<!-- HTML -->\n<!DOCTYPE html>\n<html>\n  <head><title>Mini Page</title></head>\n  <body>\n    <h1>Hello from MiniCoder!</h1>\n    <p>Edit me!</p>\n  </body>\n</html>`,
   css: `/* CSS */\nbody {\n  font-family: Arial, sans-serif;\n  background: #f0f0f0;\n  color: #333;\n}\n\nh1 {\n  color: #007acc;\n}`,
   json: `{\n  "name": "MiniCoder",\n  "version": "1.0.0",\n  "description": "A mini code editor component",\n  "features": ["editable", "reusable", "lightweight"]\n}`,

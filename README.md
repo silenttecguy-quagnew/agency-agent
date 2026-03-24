@@ -1,22 +1,122 @@
-# Agency Agent Deployment Instructions
+# 🦀 ZeroClaw Agent Dashboard
 
-## Deploying to Replit
+Two dashboards for the ZeroClaw agent pack — one Streamlit app and one React app — both loading the seven production-ready agents directly from the `zeroclaw/skills/` definitions.
 
-1. **Create a Replit account** if you don’t have one.
-2. Click on the **"Create" button** to create a new Replit project.
-3. Choose the appropriate language environment for your agency agent. (Python, Node.js, etc.)
-4. Upload your project files or import the GitHub repository directly using the Replit GitHub integration.
-5. Once the files are uploaded or imported, click on the **"Run" button** to start your project.
+## Agents
 
-## Accessing the Agency Agents Dashboard from Any Browser
+| Agent | Icon | Specialty |
+|-------|------|-----------|
+| `researcher` | 🔍 | Deep web research, synthesis, source citations |
+| `coder` | 💻 | Code generation, debugging, refactoring |
+| `code-reviewer` | 👁️ | Static analysis + AI review, severity ratings |
+| `security-scanner` | 🔒 | CVE audit, secrets detection, injection patterns |
+| `devops` | ⚙️ | CI/CD pipelines, Dockerfiles, Kubernetes, Terraform |
+| `data-analyst` | 📊 | EDA, trend detection, actionable recommendations |
+| `content-writer` | ✍️ | Blog posts, docs, changelogs, READMEs |
 
-1. After running your project, Replit will provide a URL in the format `https://<your-repl-name>.<user>.repl.co`.
-2. Open this URL in any web browser, including on Android tablets.
-3. You will have access to the agency agents dashboard directly from the browser.
+---
 
-### Tips for Mobile Access
-- Ensure your Android tablet has a stable internet connection.
-- Use a modern browser for the best experience (Chrome, Firefox).
+## Running on Replit
 
-## Additional Information
-If you encounter any issues, refer to the Replit documentation or the official GitHub repository for support.
+The repo is pre-configured for Replit — just hit **Run**:
+
+```
+run = "streamlit run app.py"
+```
+
+Replit will install dependencies from `requirements.txt` and open the Streamlit dashboard at the provided URL.
+
+---
+
+## Running Locally
+
+### Streamlit dashboard
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+# opens http://localhost:8501
+```
+
+### React dashboard (dev server)
+
+```bash
+npm install
+npm start
+# opens http://localhost:3000
+```
+
+### React dashboard (GitHub Pages deploy)
+
+```bash
+npm run deploy
+# deploys to https://silenttecguy-quagnew.github.io/agency-agent/
+```
+
+---
+
+## Using the ZeroClaw agents
+
+### 1. Copy the config
+
+```bash
+cp zeroclaw/config.toml ~/.zeroclaw/config.toml
+```
+
+### 2. Set your API key
+
+```bash
+# OpenRouter — one key for 300+ models (recommended)
+export ZEROCLAW_API_KEY="sk-or-..."
+```
+
+### 3. Install skills
+
+```bash
+for skill in zeroclaw/skills/*/; do
+  zeroclaw skills install "$skill"
+done
+```
+
+### 4. Start the runtime
+
+```bash
+zeroclaw daemon
+```
+
+### 5. Invoke an agent
+
+```bash
+zeroclaw agent --agent researcher -m "latest AI agent frameworks in 2026"
+zeroclaw agent --agent coder      -m "add rate limiting to my Express API"
+zeroclaw agent --agent devops     -m "GitHub Actions CI pipeline for Python"
+@ZeroClaw security-scanner --full --fail-on high
+@ZeroClaw data-analyst --input metrics.csv --describe "weekly active users"
+```
+
+---
+
+## Project structure
+
+```
+├── app.py                  ← Streamlit dashboard (reads SKILL.md at runtime)
+├── requirements.txt        ← Python deps (streamlit, pandas, plotly, ...)
+├── package.json            ← React app (npm start / npm run deploy)
+├── src/
+│   ├── App.js              ← Dashboard — fetches public/skills/ at runtime
+│   ├── SkillPanel.js       ← Markdown renderer for skill bodies
+│   ├── MiniCoder.js        ← Inline editor for usage snippets
+│   └── index.js
+├── public/
+│   ├── index.html
+│   └── skills/             ← Static copies of SKILL.md files (served to browser)
+│       ├── index.json      ← Ordered agent registry
+│       ├── researcher.md
+│       └── ... (one per agent)
+└── zeroclaw/
+    ├── config.toml         ← Drop into ~/.zeroclaw/config.toml
+    └── skills/
+        ├── researcher/     SKILL.md
+        ├── coder/          SKILL.md
+        └── ... (one per agent)
+```
