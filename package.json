@@ -5,6 +5,7 @@
   "homepage": "https://silenttecguy-quagnew.github.io/agency-agent/",
   "scripts": {
     "start": "react-scripts start",
+    "prebuild": "node scripts/sync-skills.js",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
     "build": "react-scripts build"
