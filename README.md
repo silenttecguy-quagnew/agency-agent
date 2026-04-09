@@ -13,6 +13,7 @@ Two dashboards for the ZeroClaw agent pack — one Streamlit app and one React a
 | `devops` | ⚙️ | CI/CD pipelines, Dockerfiles, Kubernetes, Terraform |
 | `data-analyst` | 📊 | EDA, trend detection, actionable recommendations |
 | `content-writer` | ✍️ | Blog posts, docs, changelogs, READMEs |
+| `hermes` | 📬 | Multi-agent orchestration, task routing, pipeline workflows |
 
 ---
 
@@ -87,11 +88,12 @@ zeroclaw daemon
 ### 5. Invoke an agent
 
 ```bash
-zeroclaw agent --agent researcher -m "latest AI agent frameworks in 2026"
-zeroclaw agent --agent coder      -m "add rate limiting to my Express API"
-zeroclaw agent --agent devops     -m "GitHub Actions CI pipeline for Python"
+zeroclaw agent --agent researcher       -m "latest AI agent frameworks in 2026"
+zeroclaw agent --agent coder            -m "add rate limiting to my Express API"
+zeroclaw agent --agent devops           -m "GitHub Actions CI pipeline for Python"
 @ZeroClaw security-scanner --full --fail-on high
 @ZeroClaw data-analyst --input metrics.csv --describe "weekly active users"
+@ZeroClaw hermes --goal "audit, fix, and document the src/ directory"
 ```
 
 ---

@@ -18,6 +18,7 @@ CONFIG_PATH = REPO_ROOT / "zeroclaw" / "config.toml"
 AGENT_ORDER = [
     "researcher", "coder", "code-reviewer",
     "security-scanner", "devops", "data-analyst", "content-writer",
+    "hermes",
 ]
 
 AGENT_ICONS = {
@@ -28,6 +29,7 @@ AGENT_ICONS = {
     "devops":           "⚙️",
     "data-analyst":     "📊",
     "content-writer":   "✍️",
+    "hermes":           "📬",
 }
 
 
@@ -134,7 +136,7 @@ if st.session_state.page == "home":
 
     st.title("🦀 ZeroClaw Agent Dashboard")
     st.markdown(
-        "Seven production-ready AI agents, packaged and ready to run. "
+        "Eight production-ready AI agents, packaged and ready to run. "
         "Select an agent in the sidebar for full skill details and usage examples."
     )
 
@@ -247,6 +249,7 @@ zeroclaw agent --agent security-scanner -m "full audit before release"
 zeroclaw agent --agent devops           -m "GitHub Actions CI for Python monorepo"
 zeroclaw agent --agent data-analyst     -m "analyse metrics.csv for weekly trends"
 zeroclaw agent --agent content-writer   -m "write a 900-word blog post on Rust + AI"
+zeroclaw agent --agent hermes           -m "audit, fix, and document the src/ directory"
 """,
         language="bash",
     )
