@@ -18,6 +18,7 @@ CONFIG_PATH = REPO_ROOT / "zeroclaw" / "config.toml"
 AGENT_ORDER = [
     "researcher", "coder", "code-reviewer",
     "security-scanner", "devops", "data-analyst", "content-writer",
+    "hermes",
 ]
 
 AGENT_ICONS = {
@@ -28,6 +29,7 @@ AGENT_ICONS = {
     "devops":           "⚙️",
     "data-analyst":     "📊",
     "content-writer":   "✍️",
+    "hermes":           "🪽",
 }
 
 

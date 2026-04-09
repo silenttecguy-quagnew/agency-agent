@@ -20,6 +20,7 @@ const AGENT_ORDER = [
   'devops',
   'data-analyst',
   'content-writer',
+  'hermes',
 ];
 
 const ROOT        = path.resolve(__dirname, '..');
