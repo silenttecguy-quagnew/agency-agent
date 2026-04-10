@@ -55,6 +55,56 @@ npm run deploy
 
 ---
 
+## Using Hermes (standalone chat)
+
+`hermes.py` is a self-contained CLI for [NousResearch Hermes 3](https://openrouter.ai/nousresearch/hermes-3-llama-3.1-405b) via OpenRouter.
+
+### Setup
+
+```bash
+# 1. Navigate into the repo root first
+cd path/to/agency-agent
+
+# 2. Install the only dependency
+pip install openai
+
+# 3. Set your OpenRouter API key
+export ZEROCLAW_API_KEY="sk-or-..."   # Linux / macOS / Git Bash
+```
+
+**Windows PowerShell:**
+```powershell
+cd C:\path\to\agency-agent
+pip install openai
+$env:ZEROCLAW_API_KEY = "sk-or-..."
+```
+
+### Running
+
+| Mode | Command | What it does |
+|------|---------|--------------|
+| Interactive chat | `python hermes.py` | Multi-turn conversation loop |
+| Single-shot | `python hermes.py "your prompt here"` | One prompt → streamed reply → exit |
+
+### Swapping models
+
+The default model is the 405B. Use the 70B for faster / cheaper responses:
+
+```bash
+# Linux / macOS
+HERMES_MODEL="nousresearch/hermes-3-llama-3.1-70b" python hermes.py "plan a CI/CD pipeline"
+```
+
+```powershell
+# Windows PowerShell — set env var first, then run
+$env:HERMES_MODEL = "nousresearch/hermes-3-llama-3.1-70b"
+python hermes.py "plan a CI/CD pipeline"
+```
+
+> `HERMES_MODEL` and a prompt argument are independent — you can use either or both together.
+
+---
+
 ## Using the ZeroClaw agents
 
 ### 1. Copy the config
